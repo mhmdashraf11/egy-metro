@@ -23,9 +23,7 @@ class AppRouter {
       case AppRoutes.metroLines:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
-            appBar: AppBar(
-              title: const Text('Metro Lines'),
-            ),
+            appBar: AppBar(title: const Text('Metro Lines')),
             body: const MetroLinesPage(),
           ),
         );
