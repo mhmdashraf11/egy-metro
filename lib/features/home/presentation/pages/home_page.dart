@@ -3,9 +3,295 @@ import 'package:egy_metro/core/theme/app_shapes.dart';
 import 'package:egy_metro/core/theme/app_spacing.dart';
 import 'package:egy_metro/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:egy_metro/core/localization/app_translation.dart';
+import 'package:egy_metro/features/nearby_stations/domain/services/nearby_stations_service.dart';
+import 'package:egy_metro/features/nearby_stations/domain/entities/nearby_station.dart';
 
-class HomePage extends StatelessWidget {
+class _GroupedStation {
+  final String nameEn;
+  final String nameAr;
+  final List<int> lineIds;
+  final double distanceInMeters;
+  final double latitude;
+  final double longitude;
+
+  _GroupedStation({
+    required this.nameEn,
+    required this.nameAr,
+    required this.lineIds,
+    required this.distanceInMeters,
+    required this.latitude,
+    required this.longitude,
+  });
+}
+
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _isLoadingNearby = true;
+  List<_GroupedStation> _nearbyStations = [];
+  String? _nearbyError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNearbyStations();
+  }
+
+  Future<void> _loadNearbyStations() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingNearby = true;
+      _nearbyError = null;
+    });
+
+    try {
+      final service = GetIt.I<NearbyStationsService>();
+      final stations = await service.getNearbyStations(limit: 15);
+
+      final Map<String, List<NearbyStation>> grouped = {};
+      for (var ns in stations) {
+        grouped.putIfAbsent(ns.station.nameEn, () => []).add(ns);
+      }
+
+      final List<_GroupedStation> uniqueStations = [];
+      for (var entry in grouped.entries) {
+        final list = entry.value;
+        final first = list.first;
+        final lineIds = list.map((ns) => ns.station.lineId).toSet().toList()
+          ..sort();
+
+        uniqueStations.add(
+          _GroupedStation(
+            nameEn: first.station.nameEn,
+            nameAr: first.station.nameAr,
+            lineIds: lineIds,
+            distanceInMeters: first.distanceInMeters,
+            latitude: first.station.lat,
+            longitude: first.station.lng,
+          ),
+        );
+      }
+
+      uniqueStations.sort(
+        (a, b) => a.distanceInMeters.compareTo(b.distanceInMeters),
+      );
+
+      if (mounted) {
+        setState(() {
+          _nearbyStations = uniqueStations.take(5).toList();
+          _isLoadingNearby = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _nearbyError = e.toString().replaceAll('Exception: ', '');
+          _isLoadingNearby = false;
+        });
+      }
+    }
+  }
+
+  String _formatDistance(double meters) {
+    return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  String _formatTime(double meters) {
+    final minutes = (meters / 80).round();
+    return '${minutes < 1 ? 1 : minutes} min';
+  }
+
+  String _formatLines(BuildContext context, List<int> lineIds) {
+    if (lineIds.isEmpty) return '';
+    if (lineIds.length == 1) {
+      return '${AppTranslation.translate(context, 'line_label')} ${lineIds.first}';
+    }
+    lineIds.sort();
+    return '${AppTranslation.translate(context, 'lines_label')} ${lineIds.join(' & ')}';
+  }
+
+  Color _getLineColor(int lineId, bool isDark) {
+    switch (lineId) {
+      case 1:
+        return isDark ? AppColors.darkPrimary : AppColors.primary;
+      case 2:
+        return isDark ? AppColors.darkTertiaryContainer : AppColors.secondary;
+      case 3:
+        return isDark ? AppColors.darkSecondary : AppColors.tertiary;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getStationColor(List<int> lineIds, bool isDark) {
+    if (lineIds.isEmpty) return Colors.grey;
+    return _getLineColor(lineIds.first, isDark);
+  }
+
+  Widget _buildNearbySectionContent(BuildContext context, bool isDark) {
+    if (_isLoadingNearby) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppTranslation.translate(context, 'finding_stations'),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark
+                      ? AppColors.darkOnSurfaceVariant
+                      : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_nearbyError != null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
+          borderRadius: AppShapes.borderLG,
+          border: isDark
+              ? Border.all(color: Colors.white.withOpacity(0.1))
+              : Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.location_off_outlined,
+                  color: isDark ? AppColors.darkError : AppColors.error,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _nearbyError!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? AppColors.darkOnSurface : Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: isDark
+                      ? AppColors.darkPrimary
+                      : AppColors.primary,
+                  foregroundColor: isDark
+                      ? AppColors.darkOnPrimary
+                      : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppShapes.borderMD,
+                  ),
+                ),
+                onPressed: () async {
+                  final permission = await Geolocator.checkPermission();
+                  if (permission == LocationPermission.denied) {
+                    await Geolocator.requestPermission();
+                  } else if (permission == LocationPermission.deniedForever) {
+                    await Geolocator.openAppSettings();
+                  }
+                  _loadNearbyStations();
+                },
+                icon: Icon(
+                  _nearbyError != null &&
+                          _nearbyError!.toLowerCase().contains(
+                            'permanently denied',
+                          )
+                      ? Icons.settings
+                      : Icons.my_location,
+                  size: 16,
+                ),
+                label: Text(
+                  _nearbyError != null &&
+                          _nearbyError!.toLowerCase().contains(
+                            'permanently denied',
+                          )
+                      ? AppTranslation.translate(context, 'open_settings')
+                      : AppTranslation.translate(context, 'allow_access'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_nearbyStations.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Text(
+            AppTranslation.translate(context, 'no_stations'),
+            style: TextStyle(
+              color: isDark ? AppColors.darkOnSurfaceVariant : Colors.grey,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+
+    return Column(
+      children: List.generate(_nearbyStations.length, (index) {
+        final station = _nearbyStations[index];
+        final distanceStr = _formatDistance(station.distanceInMeters);
+        final timeStr = _formatTime(station.distanceInMeters);
+        final linesStr = _formatLines(context, station.lineIds);
+        final stationColor = _getStationColor(station.lineIds, isDark);
+        final stationName = isArabic ? station.nameAr : station.nameEn;
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: index == _nearbyStations.length - 1
+                ? 0
+                : AppSpacing.stackSm,
+          ),
+          child: _buildNearbyStation(
+            context,
+            stationName,
+            linesStr,
+            distanceStr,
+            timeStr,
+            stationColor,
+            isDark,
+            station.latitude,
+            station.longitude,
+          ),
+        );
+      }),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,33 +313,22 @@ class HomePage extends StatelessWidget {
           const SizedBox(height: AppSpacing.stackLg),
 
           // Saved Routes
-          _buildSectionHeader(context, 'Saved Routes', null, isDark),
+          _buildSectionHeader(context, AppTranslation.translate(context, 'saved_routes'), null, isDark),
           const SizedBox(height: AppSpacing.stackMd),
           _buildSavedRoutes(context, isDark),
           const SizedBox(height: AppSpacing.stackLg),
 
           // Nearby
-          _buildSectionHeader(context, 'Nearby', 'View Map', isDark),
+          _buildSectionHeader(
+            context,
+            AppTranslation.translate(context, 'nearby'),
+            AppTranslation.translate(context, 'view_map'),
+            isDark,
+            onActionTap: () =>
+                Navigator.pushNamed(context, AppRoutes.nearbyStations),
+          ),
           const SizedBox(height: AppSpacing.stackMd),
-          _buildNearbyStation(
-            context,
-            'Sadat',
-            'Lines 1 & 2',
-            '0.4 km',
-            '5 min',
-            Colors.red,
-            isDark,
-          ),
-          const SizedBox(height: AppSpacing.stackSm),
-          _buildNearbyStation(
-            context,
-            'Nasser',
-            'Lines 1 & 3',
-            '1.2 km',
-            '15 min',
-            Colors.blue,
-            isDark,
-          ),
+          _buildNearbySectionContent(context, isDark),
           const SizedBox(height: AppSpacing.stackLg),
 
           // Status Card
@@ -90,7 +365,7 @@ class HomePage extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Where to?',
+              AppTranslation.translate(context, 'search_placeholder'),
               style: TextStyle(
                 color: isDark ? AppColors.darkOnSurfaceVariant : Colors.grey,
                 fontSize: 16,
@@ -120,25 +395,25 @@ class HomePage extends StatelessWidget {
       children: [
         _buildActionItem(
           Icons.alt_route,
-          'Plan',
+          AppTranslation.translate(context, 'plan'),
           isDark,
           onTap: () => Navigator.pushNamed(context, AppRoutes.routePlanner),
         ),
         _buildActionItem(
           Icons.map_outlined,
-          'Map',
+          AppTranslation.translate(context, 'map'),
           isDark,
           onTap: () => Navigator.pushNamed(context, AppRoutes.metroMap),
         ),
         _buildActionItem(
           Icons.timeline,
-          'Lines',
+          AppTranslation.translate(context, 'lines'),
           isDark,
           onTap: () => Navigator.pushNamed(context, AppRoutes.metroLines),
         ),
         _buildActionItem(
           Icons.confirmation_number_outlined,
-          'Tickets',
+          AppTranslation.translate(context, 'tickets'),
           isDark,
           onTap: () => Navigator.pushNamed(context, AppRoutes.ticketPricing),
         ),
@@ -194,8 +469,9 @@ class HomePage extends StatelessWidget {
     BuildContext context,
     String title,
     String? action,
-    bool isDark,
-  ) {
+    bool isDark, {
+    VoidCallback? onActionTap,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -209,7 +485,7 @@ class HomePage extends StatelessWidget {
         ),
         if (action != null)
           TextButton(
-            onPressed: () {},
+            onPressed: onActionTap,
             child: Text(
               action,
               style: TextStyle(
@@ -228,8 +504,8 @@ class HomePage extends StatelessWidget {
         Expanded(
           child: _buildSavedCard(
             Icons.home_outlined,
-            'Home',
-            'Al Shohadaa',
+            AppTranslation.translate(context, 'home'),
+            AppTranslation.translate(context, 'al_shohadaa'),
             Colors.red,
             isDark,
           ),
@@ -238,8 +514,8 @@ class HomePage extends StatelessWidget {
         Expanded(
           child: _buildSavedCard(
             Icons.work_outline,
-            'Work',
-            'Attaba',
+            AppTranslation.translate(context, 'work'),
+            AppTranslation.translate(context, 'attaba'),
             Colors.green,
             isDark,
           ),
@@ -310,97 +586,113 @@ class HomePage extends StatelessWidget {
     String time,
     Color color,
     bool isDark,
+    double latitude,
+    double longitude,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
-        borderRadius: AppShapes.borderLG,
-        border: isDark
-            ? Border.all(color: Colors.white.withOpacity(0.1))
-            : Border.all(color: Colors.grey.shade100),
-      ),
-      child: Row(
-        children: [
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? AppColors.darkSurfaceContainerHigh
-                      : const Color(0xFFF5F5F5),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.directions_train, size: 24),
-              ),
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isDark ? AppColors.darkSurface : Colors.white,
-                    width: 2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
+          borderRadius: AppShapes.borderLG,
+          border: isDark
+              ? Border.all(color: Colors.white.withOpacity(0.1))
+              : Border.all(color: Colors.grey.shade100),
+        ),
+        child: InkWell(
+          borderRadius: AppShapes.borderLG,
+          onTap: () async {
+            final Uri googleMapsUrl = Uri.parse("https://www.google.com/maps/search/?api=1&query=$latitude,$longitude");
+            if (await canLaunchUrl(googleMapsUrl)) {
+              await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
               children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.darkOnSurface : Colors.black87,
+                Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.darkSurfaceContainerHigh
+                            : const Color(0xFFF5F5F5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.directions_train, size: 24),
+                    ),
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? AppColors.darkSurface : Colors.white,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? AppColors.darkOnSurface : Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        lines,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? AppColors.darkOnSurfaceVariant
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  lines,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark
-                        ? AppColors.darkOnSurfaceVariant
-                        : Colors.grey.shade600,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      distance,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.directions_walk,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
+                        Text(
+                          time,
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                distance,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                ),
-              ),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.directions_walk,
-                    size: 14,
-                    color: Colors.grey,
-                  ),
-                  Text(
-                    time,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -423,7 +715,7 @@ class HomePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'All Lines Running Normally',
+                  AppTranslation.translate(context, 'status_title'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -432,7 +724,7 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Last updated 2 mins ago',
+                  AppTranslation.translate(context, 'status_subtitle'),
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark

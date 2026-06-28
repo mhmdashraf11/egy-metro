@@ -5,6 +5,9 @@ import 'package:egy_metro/features/metro_lines/presentation/pages/metro_lines_pa
 import 'package:egy_metro/features/route_planner/presentation/pages/route_planner_page.dart';
 import 'package:egy_metro/features/settings/presentation/pages/settings_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:egy_metro/core/localization/app_translation.dart';
+import 'package:egy_metro/features/settings/presentation/cubit/settings_cubit.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -37,14 +40,17 @@ class _MainScreenState extends State<MainScreen> {
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
         title: Text(
-          'Cairo Metro',
+          AppTranslation.translate(context, 'app_title'),
           style: AppTypography.titleLarge.copyWith(
             fontWeight: FontWeight.bold,
             color: isDark ? AppColors.darkOnSurface : AppColors.primary,
           ),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.translate), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.translate),
+            onPressed: () => context.read<SettingsCubit>().toggleLocale(),
+          ),
         ],
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -64,26 +70,26 @@ class _MainScreenState extends State<MainScreen> {
         unselectedItemColor: Colors.grey,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            activeIcon: const Icon(Icons.home),
+            label: AppTranslation.translate(context, 'home'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.train_outlined),
-            activeIcon: Icon(Icons.train),
-            label: 'Lines',
+            icon: const Icon(Icons.train_outlined),
+            activeIcon: const Icon(Icons.train),
+            label: AppTranslation.translate(context, 'lines'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.route_outlined),
-            activeIcon: Icon(Icons.route),
-            label: 'Route',
+            icon: const Icon(Icons.route_outlined),
+            activeIcon: const Icon(Icons.route),
+            label: AppTranslation.translate(context, 'route'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            activeIcon: const Icon(Icons.settings),
+            label: AppTranslation.translate(context, 'settings'),
           ),
         ],
       ),

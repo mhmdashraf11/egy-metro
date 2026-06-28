@@ -3,6 +3,8 @@ import 'core/database/app_database.dart';
 import 'core/database/database_seeder.dart';
 import 'features/nearby_stations/domain/services/nearby_stations_service.dart';
 import 'features/route_planner/domain/services/dijkstra_service.dart';
+import 'features/settings/presentation/cubit/settings_cubit.dart';
+import 'features/route_planner/presentation/cubit/route_planner_cubit.dart';
 
 final sl = GetIt.instance;
 
@@ -30,4 +32,12 @@ Future<void> init() async {
   // Repositories
   // Use cases
   // Cubits
+  sl.registerLazySingleton(() => SettingsCubit());
+  sl.registerFactory(() => RoutePlannerCubit(
+        stationDao: sl(),
+        recentSearchDao: sl(),
+        favoriteRouteDao: sl(),
+        dijkstraService: sl(),
+        nearbyStationsService: sl(),
+      ));
 }

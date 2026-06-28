@@ -3,6 +3,7 @@ import 'package:egy_metro/features/metro_lines/data/datasources/station_dao.dart
 import 'package:egy_metro/features/metro_lines/data/models/station_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:egy_metro/core/localization/app_translation.dart';
 
 import '../widgets/metro_map.dart';
 
@@ -57,9 +58,9 @@ class _MetroLinesPageState extends State<MetroLinesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Metro Map',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Text(
+            AppTranslation.translate(context, 'metro_map'),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           const MetroMap(),
@@ -67,15 +68,21 @@ class _MetroLinesPageState extends State<MetroLinesPage> {
 
           DropdownMenu<int>(
             width: double.infinity,
-            label: const Text('Choose a line'),
+            label: Text(AppTranslation.translate(context, 'choose_line')),
             controller: lineController,
             onSelected: _onLineSelected,
-            dropdownMenuEntries: const [
-              DropdownMenuEntry(value: 1, label: 'Line 1 (Helwan - El Marg)'),
-              DropdownMenuEntry(value: 2, label: 'Line 2 (Shubra - El Mounib)'),
+            dropdownMenuEntries: [
+              DropdownMenuEntry(
+                value: 1,
+                label: AppTranslation.translate(context, 'line_1_desc'),
+              ),
+              DropdownMenuEntry(
+                value: 2,
+                label: AppTranslation.translate(context, 'line_2_desc'),
+              ),
               DropdownMenuEntry(
                 value: 3,
-                label: 'Line 3 (Adly Mansour - Rod El Farag)',
+                label: AppTranslation.translate(context, 'line_3_desc'),
               ),
             ],
           ),
@@ -85,11 +92,11 @@ class _MetroLinesPageState extends State<MetroLinesPage> {
           if (_isLoading)
             const Center(child: CircularProgressIndicator())
           else if (_stations.isNotEmpty)
-            _buildStationList(isDark)
+            _buildStationList(context, isDark)
           else
             Center(
               child: Text(
-                'Select a line to view stations',
+                AppTranslation.translate(context, 'select_line_prompt'),
                 style: TextStyle(
                   color: isDark ? AppColors.darkOnSurfaceVariant : Colors.grey,
                 ),
@@ -102,8 +109,9 @@ class _MetroLinesPageState extends State<MetroLinesPage> {
     );
   }
 
-  Widget _buildStationList(bool isDark) {
+  Widget _buildStationList(BuildContext context, bool isDark) {
     final lineColor = _getLineColor(_selectedLineId ?? 0, isDark);
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
     return Column(
       children: List.generate(_stations.length, (index) {
@@ -157,7 +165,7 @@ class _MetroLinesPageState extends State<MetroLinesPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        station.nameEn,
+                        isArabic ? station.nameAr : station.nameEn,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: station.isInterchange
@@ -169,7 +177,7 @@ class _MetroLinesPageState extends State<MetroLinesPage> {
                         ),
                       ),
                       Text(
-                        station.nameAr,
+                        isArabic ? station.nameEn : station.nameAr,
                         style: TextStyle(
                           fontSize: 14,
                           color: isDark
@@ -193,9 +201,9 @@ class _MetroLinesPageState extends State<MetroLinesPage> {
                         : Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    'Interchange',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  child: Text(
+                    AppTranslation.translate(context, 'interchange'),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                 ),
             ],
