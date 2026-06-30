@@ -6,27 +6,37 @@ Cairo Metro Guide (egy_metro) is a feature-rich, high-performance offline-first 
 
 ## 📸 App Showcase
 
-Below is a complete visual walkthrough of the app's interfaces:
+Below is a categorized visual walkthrough showcasing the app's light/dark modes, localization support, and core feature views.
 
-### Main Features & Home Screen
-| Home Page (Light) | Quick Navigation | Route Details | Search bottom sheet |
-| --- | --- | --- | --- |
-| <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.38%20PM.jpeg" width="220" alt="Home Screen"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.39%20PM.jpeg" width="220" alt="Quick Navigation"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.39%20PM%20%281%29.jpeg" width="220" alt="Route Details"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.39%20PM%20%282%29.jpeg" width="220" alt="Search"> |
+### 🇬🇧 English UI (Light & Dark Mode)
 
-### Location, Map, and Settings
-| Nearby Stations | Interactive Map (EN) | Settings Menu | Interactive Map (AR) |
+#### 🏠 Home, Lines & Maps
+| Light Home Screen | Dark Home Screen | Metro Lines List | HD Interactive Map |
 | --- | --- | --- | --- |
-| <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.40%20PM.jpeg" width="220" alt="Nearby Stations"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.41%20PM.jpeg" width="220" alt="EN Map"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.41%20PM%20%281%29.jpeg" width="220" alt="Settings"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.42%20PM.jpeg" width="220" alt="AR Map"> |
+| <img src="app%20screenshots/light%20mode%20home%20screen.jpeg" width="220" alt="Light Home Screen"> | <img src="app%20screenshots/darkMode%20HomeScreen.jpeg" width="220" alt="Dark Home Screen"> | <img src="app%20screenshots/light%20mode%20lines.jpeg" width="220" alt="Metro Lines"> | <img src="app%20screenshots/en%20map%20for%20en%20language.jpeg" width="220" alt="English Map"> |
 
-### Station Details & Dark Mode UI
-| Route Detail (GPS) | Station View | Ticket Pricing | Line View |
+#### 🗺️ Route Planner & Path Finder
+| Route Planner Form | Dijkstra Shortest Path | Detailed Stops List | Interchange Stations |
 | --- | --- | --- | --- |
-| <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.42%20PM%20%281%29.jpeg" width="220" alt="GPS Route"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.42%20PM%20%282%29.jpeg" width="220" alt="Stations"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.42%20PM%20%283%29.jpeg" width="220" alt="Pricing Calculator"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.42%20PM%20%284%29.jpeg" width="220" alt="Lines"> |
+| <img src="app%20screenshots/light%20mode%20route%20planning.jpeg" width="220" alt="Route Planner Form"> | <img src="app%20screenshots/route%20planning%20result.jpeg" width="220" alt="Dijkstra Shortest Path"> | <img src="app%20screenshots/route%20planning%20result%20details.jpeg" width="220" alt="Stops List"> | <img src="app%20screenshots/lines%20showing%20the%20interchange%20stations.jpeg" width="220" alt="Interchange Stations"> |
 
-### Favorites & Pricing details
-| Saved Favorites | Route Summary | Station Timetable | Multi-line Transfer |
+#### 🏷️ Line-Specific Details & Planner Variations
+| Line 1 Stations | Line 2 Stations | Line 3 Stations | Search Form Variant |
 | --- | --- | --- | --- |
-| <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.43%20PM.jpeg" width="220" alt="Favorites"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.43%20PM%20%281%29.jpeg" width="220" alt="Summary"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.43%20PM%20%282%29.jpeg" width="220" alt="Timetable"> | <img src="app%20screenshots/WhatsApp%20Image%202026-06-30%20at%2012.49.43%20PM%20%283%29.jpeg" width="220" alt="Transfer info"> |
+| <img src="app%20screenshots/line1.jpeg" width="220" alt="Line 1"> | <img src="app%20screenshots/line2.jpeg" width="220" alt="Line 2"> | <img src="app%20screenshots/line3.jpeg" width="220" alt="Line 3"> | <img src="app%20screenshots/route%20planning.jpeg" width="220" alt="Search Form"> |
+
+#### 🎫 Favorites, Pricing & Settings
+| Saved Favorites | Ticket Price Banner | Fares Calculator | App Settings (EN) |
+| --- | --- | --- | --- |
+| <img src="app%20screenshots/showing%20favorites%20route%20section.jpeg" width="220" alt="Favorites Section"> | <img src="app%20screenshots/tickets%20pricing.jpeg" width="220" alt="Ticket Price Banner"> | <img src="app%20screenshots/tickets%20pricing2.jpeg" width="220" alt="Fares Calculator"> | <img src="app%20screenshots/settings%20screen.png" width="220" alt="Settings Screen"> |
+
+---
+
+### 🇪🇬 Arabic UI (Full Localization)
+
+| Arabic Home Page | Arabic Metro Lines | Arabic Map Screen | Arabic Route Planner | Arabic Settings |
+| --- | --- | --- | --- | --- |
+| <img src="app%20screenshots/arabic%20language%20home%20page.png" width="180" alt="AR Home"> | <img src="app%20screenshots/arabic%20lang%20lines.png" width="180" alt="AR Lines"> | <img src="app%20screenshots/arabic%20lang%20lines%20and%20ar%20map.png" width="180" alt="AR Map"> | <img src="app%20screenshots/ar%20route%20planning.png" width="180" alt="AR Router"> | <img src="app%20screenshots/arabic%20lang%20settings.png" width="180" alt="AR Settings"> |
 
 ---
 
