@@ -8,8 +8,8 @@ class LocalStorageService {
     return _prefs.setString(key, value);
   }
 
-  String getString(String key, {String defaultValue = ''}) {
-    return _prefs.getString(key) ?? defaultValue;
+  String? getString(String key) {
+    return _prefs.getString(key);
   }
 
   Future<bool> setBool(String key, bool value) {

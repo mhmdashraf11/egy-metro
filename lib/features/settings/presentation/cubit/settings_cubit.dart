@@ -17,7 +17,9 @@ class SettingsCubit extends Cubit<SettingsState> {
       orElse: () => ThemeMode.system,
     );
 
-    final locale = langCode != null ? Locale(langCode) : const Locale('en');
+    final locale = (langCode != null && langCode.isNotEmpty)
+        ? Locale(langCode)
+        : const Locale('en');
 
     emit(state.copyWith(themeMode: themeMode, locale: locale));
   }

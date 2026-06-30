@@ -56,6 +56,7 @@ class _RoutePlannerViewState extends State<RoutePlannerView> {
     List<StationEntity> stations,
     StationEntity? initialSelection,
   ) {
+    final cubit = context.read<RoutePlannerCubit>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -65,7 +66,6 @@ class _RoutePlannerViewState extends State<RoutePlannerView> {
           stations: stations,
           initialSelection: initialSelection,
           onSelected: (station) {
-            final cubit = context.read<RoutePlannerCubit>();
             if (isFrom) {
               cubit.setFromStation(station);
             } else {
@@ -1310,150 +1310,157 @@ class _StationSearchBottomSheetState extends State<_StationSearchBottomSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
-        borderRadius: AppShapes.bottomSheetBorder,
-      ),
-      padding: EdgeInsets.only(
-        top: 16,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.2) : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            AppTranslation.translate(context, 'select_station'),
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.darkOnSurface : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: AppTranslation.translate(context, 'search_station'),
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: AppShapes.borderMD,
-                borderSide: BorderSide(
-                  color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: AppShapes.borderMD,
-                borderSide: BorderSide(
-                  color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: AppShapes.borderMD,
-                borderSide: BorderSide(
-                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
-                  width: 1.5,
-                ),
-              ),
-              filled: true,
-              fillColor: isDark ? AppColors.darkSurfaceContainerHigh : const Color(0xFFF5F5F5),
-            ),
-            onChanged: _filterStations,
-          ),
-          const SizedBox(height: 16),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.45,
-            ),
-            child: _filteredStations.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24.0),
-                      child: Text(
-                        AppTranslation.translate(context, 'no_stations'),
-                        style: TextStyle(
-                          color: isDark ? AppColors.darkOnSurfaceVariant : Colors.grey,
-                        ),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _filteredStations.length,
-                    itemBuilder: (context, index) {
-                      final station = _filteredStations[index];
-                      final name = isArabic ? station.nameAr : station.nameEn;
-                      final secondaryName = isArabic ? station.nameEn : station.nameAr;
-                      final lineColor = _getLineColor(station.lineId, isDark);
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
+    final screenHeight = mediaQuery.size.height;
+    final remainingHeight = screenHeight - keyboardHeight - 200;
+    final listMaxHeight = (screenHeight * 0.45).clamp(100.0, remainingHeight > 100.0 ? remainingHeight : 100.0);
 
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: lineColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        title: Text(
-                          name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? AppColors.darkOnSurface : Colors.black87,
-                          ),
-                        ),
-                        subtitle: Text(
-                          secondaryName,
+    return Material(
+      color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
+      borderRadius: AppShapes.bottomSheetBorder,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: 16,
+          left: 20,
+          right: 20,
+          bottom: keyboardHeight + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withOpacity(0.2) : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              AppTranslation.translate(context, 'select_station'),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.darkOnSurface : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: AppTranslation.translate(context, 'search_station'),
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: AppShapes.borderMD,
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: AppShapes.borderMD,
+                  borderSide: BorderSide(
+                    color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: AppShapes.borderMD,
+                  borderSide: BorderSide(
+                    color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                    width: 1.5,
+                  ),
+                ),
+                filled: true,
+                fillColor: isDark ? AppColors.darkSurfaceContainerHigh : const Color(0xFFF5F5F5),
+              ),
+              onChanged: _filterStations,
+            ),
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: listMaxHeight,
+              ),
+              child: _filteredStations.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24.0),
+                        child: Text(
+                          AppTranslation.translate(context, 'no_stations'),
                           style: TextStyle(
                             color: isDark ? AppColors.darkOnSurfaceVariant : Colors.grey,
-                            fontSize: 12,
                           ),
                         ),
-                        trailing: station.isInterchange
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.darkSurfaceContainerHigh
-                                      : Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  AppTranslation.translate(context, 'interchange'),
-                                  style: const TextStyle(
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _filteredStations.length,
+                      itemBuilder: (context, index) {
+                        final station = _filteredStations[index];
+                        final name = isArabic ? station.nameAr : station.nameEn;
+                        final secondaryName = isArabic ? station.nameEn : station.nameAr;
+                        final lineColor = _getLineColor(station.lineId, isDark);
+
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: lineColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          title: Text(
+                            name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? AppColors.darkOnSurface : Colors.black87,
+                            ),
+                          ),
+                          subtitle: Text(
+                            secondaryName,
+                            style: TextStyle(
+                              color: isDark ? AppColors.darkOnSurfaceVariant : Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                          trailing: station.isInterchange
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
                                   ),
-                                ),
-                              )
-                            : null,
-                        onTap: () {
-                          widget.onSelected(station);
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
-          ),
-        ],
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? AppColors.darkSurfaceContainerHigh
+                                        : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    AppTranslation.translate(context, 'interchange'),
+                                    style: const TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                          onTap: () {
+                            widget.onSelected(station);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
