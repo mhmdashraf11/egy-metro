@@ -6,26 +6,50 @@ class MetroMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final mapAsset = isArabic ? 'assets/images/metro_map_ar.jpg' : 'assets/images/metro_map_en.jpg';
+
     return GestureDetector(
       onTap: () {
         showDialog(
           context: context,
           barrierColor: Colors.black.withOpacity(0.6),
-          builder: (_) => Dialog(
+          builder: (dialogContext) => Dialog(
             backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.all(16),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: PhotoView(
-                backgroundDecoration: const BoxDecoration(
-                  color: Colors.transparent,
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: PhotoView(
+                    backgroundDecoration: const BoxDecoration(
+                      color: Colors.transparent,
+                    ),
+                    imageProvider: AssetImage(mapAsset),
+                    minScale: PhotoViewComputedScale.contained,
+                    maxScale: PhotoViewComputedScale.covered * 4,
+                  ),
                 ),
-                imageProvider: const AssetImage(
-                  'assets/images/metro_map_final.png',
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(dialogContext).pop(),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
                 ),
-                minScale: PhotoViewComputedScale.contained,
-                maxScale: PhotoViewComputedScale.covered * 4,
-              ),
+              ],
             ),
           ),
         );
@@ -36,7 +60,7 @@ class MetroMap extends StatelessWidget {
           height: 110,
           width: double.infinity,
           child: Image.asset(
-            'assets/images/metro_map_final.png',
+            mapAsset,
             fit: BoxFit.cover,
             alignment: Alignment.center,
           ),

@@ -9,6 +9,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:egy_metro/core/localization/app_translation.dart';
 import 'package:egy_metro/features/nearby_stations/domain/services/nearby_stations_service.dart';
 import 'package:egy_metro/features/nearby_stations/domain/entities/nearby_station.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:egy_metro/features/favorites/presentation/cubit/favorite_cubit.dart';
+import 'package:egy_metro/features/favorites/data/models/favorite_route_entity.dart';
+import 'package:egy_metro/features/metro_lines/data/datasources/station_dao.dart';
+import 'package:egy_metro/features/metro_lines/data/models/station_entity.dart';
 
 class _GroupedStation {
   final String nameEn;
@@ -39,11 +44,32 @@ class _HomePageState extends State<HomePage> {
   bool _isLoadingNearby = true;
   List<_GroupedStation> _nearbyStations = [];
   String? _nearbyError;
+  List<StationEntity> _stations = [];
+  bool _isLoadingStations = true;
 
   @override
   void initState() {
     super.initState();
     _loadNearbyStations();
+    _loadStations();
+  }
+
+  Future<void> _loadStations() async {
+    try {
+      final stations = await GetIt.I<StationDao>().findAll();
+      if (mounted) {
+        setState(() {
+          _stations = stations;
+          _isLoadingStations = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoadingStations = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadNearbyStations() async {
@@ -298,43 +324,46 @@ class _HomePageState extends State<HomePage> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.marginMobile),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: AppSpacing.stackMd),
-          // Search Bar
-          _buildSearchBar(context, isDark),
-          const SizedBox(height: AppSpacing.stackLg),
+    return BlocProvider<FavoriteCubit>.value(
+      value: GetIt.I<FavoriteCubit>()..getAllFavoriteRoutes(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.marginMobile),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: AppSpacing.stackMd),
+            // Search Bar
+            _buildSearchBar(context, isDark),
+            const SizedBox(height: AppSpacing.stackLg),
 
-          // Quick Actions
-          _buildQuickActions(context, isDark),
-          const SizedBox(height: AppSpacing.stackLg),
+            // Quick Actions
+            _buildQuickActions(context, isDark),
+            const SizedBox(height: AppSpacing.stackLg),
 
-          // Saved Routes
-          _buildSectionHeader(context, AppTranslation.translate(context, 'saved_routes'), null, isDark),
-          const SizedBox(height: AppSpacing.stackMd),
-          _buildSavedRoutes(context, isDark),
-          const SizedBox(height: AppSpacing.stackLg),
+            // Saved Routes
+            _buildSectionHeader(context, AppTranslation.translate(context, 'saved_routes'), null, isDark),
+            const SizedBox(height: AppSpacing.stackMd),
+            _buildSavedRoutes(context, isDark),
+            const SizedBox(height: AppSpacing.stackLg),
 
-          // Nearby
-          _buildSectionHeader(
-            context,
-            AppTranslation.translate(context, 'nearby'),
-            AppTranslation.translate(context, 'view_map'),
-            isDark,
-            onActionTap: () =>
-                Navigator.pushNamed(context, AppRoutes.nearbyStations),
-          ),
-          const SizedBox(height: AppSpacing.stackMd),
-          _buildNearbySectionContent(context, isDark),
-          const SizedBox(height: AppSpacing.stackLg),
+            // Nearby
+            _buildSectionHeader(
+              context,
+              AppTranslation.translate(context, 'nearby'),
+              AppTranslation.translate(context, 'view_map'),
+              isDark,
+              onActionTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.nearbyStations),
+            ),
+            const SizedBox(height: AppSpacing.stackMd),
+            _buildNearbySectionContent(context, isDark),
+            const SizedBox(height: AppSpacing.stackLg),
 
-          // Status Card
-          _buildStatusCard(context, isDark),
-          const SizedBox(height: AppSpacing.stackLg * 2),
-        ],
+            // Status Card
+            _buildStatusCard(context, isDark),
+            const SizedBox(height: AppSpacing.stackLg * 2),
+          ],
+        ),
       ),
     );
   }
@@ -499,28 +528,88 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildSavedRoutes(BuildContext context, bool isDark) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildSavedCard(
-            Icons.home_outlined,
-            AppTranslation.translate(context, 'home'),
-            AppTranslation.translate(context, 'al_shohadaa'),
-            Colors.red,
-            isDark,
+    return BlocBuilder<FavoriteCubit, FavoriteState>(
+      builder: (context, state) {
+        if (_isLoadingStations) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        List<FavoriteRouteEntity> favorites = [];
+        if (state is FavoriteLoaded) {
+          favorites = state.favorites;
+        }
+
+        if (favorites.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
+              borderRadius: AppShapes.borderLG,
+              border: isDark
+                  ? Border.all(color: Colors.white.withOpacity(0.1))
+                  : Border.all(color: Colors.grey.shade100),
+            ),
+            child: Center(
+              child: Text(
+                AppTranslation.translate(context, 'saved_route_empty'),
+                style: TextStyle(
+                  color: isDark ? AppColors.darkOnSurfaceVariant : Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          );
+        }
+
+        final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.3,
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildSavedCard(
-            Icons.work_outline,
-            AppTranslation.translate(context, 'work'),
-            AppTranslation.translate(context, 'attaba'),
-            Colors.green,
-            isDark,
-          ),
-        ),
-      ],
+          itemCount: favorites.length,
+          itemBuilder: (context, index) {
+            final favorite = favorites[index];
+            final fromStation = _stations.firstWhere(
+              (s) => s.id == favorite.fromStationId,
+              orElse: () => const StationEntity(id: -1, nameAr: 'Unknown', nameEn: 'Unknown', lat: 0, lng: 0, lineId: -1),
+            );
+            final toStation = _stations.firstWhere(
+              (s) => s.id == favorite.toStationId,
+              orElse: () => const StationEntity(id: -1, nameAr: 'Unknown', nameEn: 'Unknown', lat: 0, lng: 0, lineId: -1),
+            );
+
+            final fromName = isArabic ? fromStation.nameAr : fromStation.nameEn;
+            final toName = isArabic ? toStation.nameAr : toStation.nameEn;
+
+            final Color routeColor = _getLineColor(fromStation.lineId, isDark);
+
+            return _buildSavedCard(
+              Icons.star_border,
+              '$fromName ➔',
+              toName,
+              routeColor,
+              isDark,
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.routePlanner,
+                  arguments: {
+                    'fromId': favorite.fromStationId,
+                    'toId': favorite.toStationId,
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -529,51 +618,68 @@ class _HomePageState extends State<HomePage> {
     String title,
     String station,
     Color color,
-    bool isDark,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
-        borderRadius: AppShapes.borderLG,
-        border: isDark
-            ? Border.all(color: Colors.white.withOpacity(0.1))
-            : Border.all(color: Colors.grey.shade100),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: isDark ? AppColors.darkPrimary : AppColors.primary),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.darkOnSurface : Colors.black87,
+    bool isDark, {
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurfaceContainerLow : Colors.white,
+          borderRadius: AppShapes.borderLG,
+          border: isDark
+              ? Border.all(color: Colors.white.withOpacity(0.1))
+              : Border.all(color: Colors.grey.shade100),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppShapes.borderLG,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: isDark ? AppColors.darkPrimary : AppColors.primary),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.darkOnSurface : Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        station,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark
+                              ? AppColors.darkOnSurfaceVariant
+                              : Colors.grey.shade600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                station,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark
-                      ? AppColors.darkOnSurfaceVariant
-                      : Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

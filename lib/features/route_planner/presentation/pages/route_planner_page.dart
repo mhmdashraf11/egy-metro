@@ -13,14 +13,28 @@ import 'package:egy_metro/features/route_planner/presentation/cubit/route_planne
 import 'package:egy_metro/features/route_planner/presentation/cubit/route_planner_state.dart';
 
 class RoutePlannerPage extends StatelessWidget {
-  const RoutePlannerPage({super.key});
+  final int? initialFromId;
+  final int? initialToId;
+
+  const RoutePlannerPage({
+    super.key,
+    this.initialFromId,
+    this.initialToId,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => GetIt.I<RoutePlannerCubit>()
-        ..loadInitialData()
-        ..detectNearestStation(),
+      create: (context) {
+        final cubit = GetIt.I<RoutePlannerCubit>();
+        if (initialFromId != null && initialToId != null) {
+          cubit.loadInitialData(fromId: initialFromId, toId: initialToId);
+        } else {
+          cubit.loadInitialData();
+          cubit.detectNearestStation();
+        }
+        return cubit;
+      },
       child: const RoutePlannerView(),
     );
   }
@@ -172,8 +186,20 @@ class _RoutePlannerViewState extends State<RoutePlannerView> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          final canPop = Navigator.canPop(context);
           return Scaffold(
-            backgroundColor: Colors.transparent,
+            backgroundColor: canPop ? theme.scaffoldBackgroundColor : Colors.transparent,
+            appBar: canPop
+                ? AppBar(
+                    title: Text(
+                      AppTranslation.translate(context, 'plan'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    elevation: 0,
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: isDark ? AppColors.darkOnSurface : Colors.black87,
+                  )
+                : null,
             body: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.marginMobile,
@@ -618,12 +644,87 @@ class _RoutePlannerViewState extends State<RoutePlannerView> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+
+        // Ticket Price Banner
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurfaceContainerLow : Colors.grey.shade50,
+            borderRadius: AppShapes.borderLG,
+            border: isDark
+                ? Border.all(color: Colors.white.withOpacity(0.05))
+                : Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.confirmation_number_outlined,
+                    color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isArabic ? 'سعر التذكرة' : 'Ticket Price',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? AppColors.darkOnSurface : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isArabic
+                            ? 'المنطقة ${_calculateZoneNumber(result.totalStops)} (${result.totalStops} محطة)'
+                            : 'Zone ${_calculateZoneNumber(result.totalStops)} (${result.totalStops} stops)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.darkOnSurfaceVariant
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Text(
+                '${_calculateTicketPrice(result.totalStops)} EGP',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? AppColors.darkPrimary : AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 24),
 
         // Path Timeline
         _buildTimeline(context, result, isDark, isArabic),
       ],
     );
+  }
+
+  int _calculateTicketPrice(int stops) {
+    if (stops <= 9) return 10;
+    if (stops <= 16) return 12;
+    if (stops <= 23) return 15;
+    return 20;
+  }
+
+  int _calculateZoneNumber(int stops) {
+    if (stops <= 9) return 1;
+    if (stops <= 16) return 2;
+    if (stops <= 23) return 3;
+    return 4;
   }
 
   Widget _buildMetricCard(BuildContext context, IconData icon, String title, String value, bool isDark) {

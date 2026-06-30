@@ -1,4 +1,3 @@
-import 'package:egy_metro/features/metro_lines/presentation/widgets/metro_map.dart';
 import 'package:flutter/material.dart';
 import 'app_routes.dart';
 import '../../features/home/presentation/pages/main_screen.dart';
@@ -9,6 +8,7 @@ import '../../features/ticket_pricing/presentation/pages/ticket_pricing_page.dar
 import '../../features/favorites/presentation/pages/favorites_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
+import '../../features/metro_lines/presentation/pages/metro_map_page.dart';
 import '../../features/metro_lines/presentation/pages/station_details_page.dart';
 
 class AppRouter {
@@ -18,7 +18,15 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const MainScreen());
 
       case AppRoutes.routePlanner:
-        return MaterialPageRoute(builder: (_) => const RoutePlannerPage());
+        final args = settings.arguments as Map<String, dynamic>?;
+        final fromId = args?['fromId'] as int?;
+        final toId = args?['toId'] as int?;
+        return MaterialPageRoute(
+          builder: (_) => RoutePlannerPage(
+            initialFromId: fromId,
+            initialToId: toId,
+          ),
+        );
 
       case AppRoutes.metroLines:
         return MaterialPageRoute(
@@ -49,7 +57,7 @@ class AppRouter {
           builder: (_) => StationDetailsPage(stationId: id),
         );
       case AppRoutes.metroMap:
-        return MaterialPageRoute(builder: (_) => const MetroMap());
+        return MaterialPageRoute(builder: (_) => const MetroMapPage());
 
       default:
         return MaterialPageRoute(

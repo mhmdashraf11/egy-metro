@@ -8,6 +8,8 @@ import '../../domain/services/dijkstra_service.dart';
 import '../../../nearby_stations/domain/services/nearby_stations_service.dart';
 import '../../../metro_lines/data/models/station_entity.dart';
 import 'route_planner_state.dart';
+import 'package:get_it/get_it.dart';
+import '../../../favorites/presentation/cubit/favorite_cubit.dart';
 
 class RoutePlannerCubit extends Cubit<RoutePlannerState> {
   final StationDao _stationDao;
@@ -29,16 +31,32 @@ class RoutePlannerCubit extends Cubit<RoutePlannerState> {
         _nearbyStationsService = nearbyStationsService,
         super(RoutePlannerState.initial());
 
-  Future<void> loadInitialData() async {
+  Future<void> loadInitialData({int? fromId, int? toId}) async {
     emit(state.copyWith(isLoadingStations: true));
     try {
       final stations = await _stationDao.findAll();
       final recent = await _recentSearchDao.findRecent();
+      
+      StationEntity? from;
+      StationEntity? to;
+      if (fromId != null && toId != null) {
+        try {
+          from = stations.firstWhere((s) => s.id == fromId);
+          to = stations.firstWhere((s) => s.id == toId);
+        } catch (_) {}
+      }
+
       emit(state.copyWith(
         stations: stations,
         recentSearches: recent,
+        fromStation: from,
+        toStation: to,
         isLoadingStations: false,
       ));
+
+      if (from != null && to != null) {
+        await calculateRoute();
+      }
     } catch (e) {
       emit(state.copyWith(
         isLoadingStations: false,
@@ -141,6 +159,8 @@ class RoutePlannerCubit extends Cubit<RoutePlannerState> {
           statusMessage: 'route_saved',
         ));
       }
+      // Refresh the shared FavoriteCubit state
+      GetIt.I<FavoriteCubit>().getAllFavoriteRoutes();
     } catch (_) {}
   }
 
